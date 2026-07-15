@@ -20,22 +20,6 @@ It's a single static HTML file: no build step, no server, no framework install. 
 
 ---
 
-## Run it
-
-### Option A — GitHub Pages (recommended)
-1. Create a new repository and add `index.html` (and this README/LICENSE) to the root.
-2. In the repo, go to **Settings → Pages**, set **Source: Deploy from a branch**, branch **main**, folder **/ (root)**, and Save.
-3. Open the published `https://<you>.github.io/<repo>/` URL.
-
-### Option B — Locally
-Serve it over HTTP (don't open the file directly — browser API calls and storage behave badly on `file://`):
-```bash
-python3 -m http.server 8000
-# then visit http://localhost:8000
-```
-
----
-
 ## The API key (required for the Chef)
 
 Larder is **bring-your-own-key**. The pantry, library matching, calories, and PDF export all work with **no key**. Only the AI features need one:
