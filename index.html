@@ -751,32 +751,42 @@ function App() {
     const k = await loadKeys(); if (k && k.remember) { setKeys(k.keys || []); setActiveKeyId(k.activeKeyId || null); setRememberKeys(true); }
     setLoaded(true);
   })(); }, []);
-  useEffect(() => { if (loaded) savePantry(pantry); }, [pantry, loaded]);
-  useEffect(() => { if (loaded) saveResearched(researched); }, [researched, loaded]);
-  useEffect(() => { if (loaded) saveKeys(rememberKeys ? { keys, activeKeyId, remember: true } : null); }, [keys, activeKeyId, rememberKeys, loaded]);
+  /* DATA-SAFETY: only persist a store after a user-initiated change in this
+     session. Without this, a transient load failure (private browsing,
+     storage hiccup, corrupted JSON) would flip `loaded` with empty state and
+     the save effects would overwrite the user's saved pantry with []. */
+  const dirty = useRef({ pantry: false, researched: false, keys: false });
+  useEffect(() => { if (loaded && dirty.current.pantry) savePantry(pantry); }, [pantry, loaded]);
+  useEffect(() => { if (loaded && dirty.current.researched) saveResearched(researched); }, [researched, loaded]);
+  useEffect(() => { if (loaded && dirty.current.keys) saveKeys(rememberKeys ? { keys, activeKeyId, remember: true } : null); }, [keys, activeKeyId, rememberKeys, loaded]);
 
-  const addResearched = (recipes) => setResearched((prev) => {
+  const addResearched = (recipes) => { dirty.current.researched = true; setResearched((prev) => {
     const ids = new Set(prev.map((r) => r.id));
     return [...prev, ...recipes.filter((r) => !ids.has(r.id))];
-  });
+  }); };
 
   const addKey = (label, value) => {
+    dirty.current.keys = true;
     const id = "k-" + Math.random().toString(36).slice(2, 9);
     setKeys((prev) => [...prev, { id, label: label || "My key", value }]);
     setActiveKeyId(id);
   };
   const removeKey = (id) => {
+    dirty.current.keys = true;
     setKeys((prev) => prev.filter((k) => k.id !== id));
     setActiveKeyId((cur) => (cur === id ? null : cur));
   };
+  const activateKey = (id) => { dirty.current.keys = true; setActiveKeyId(id); };
+  const toggleRemember = () => { dirty.current.keys = true; setRememberKeys((v) => !v); };
   const activeKey = (keys.find((k) => k.id === activeKeyId) || {}).value || "";
 
   const addItem = (name) => {
     const n = normName(name); if (!n) return;
+    dirty.current.pantry = true;
     setPantry((prev) => (prev.some((p) => normName(p) === n) ? prev : [...prev, n]));
   };
-  const removeItem = (name) => setPantry((prev) => prev.filter((p) => normName(p) !== normName(name)));
-  const toggleItem = (name) => setPantry((prev) => (prev.some((p) => normName(p) === normName(name)) ? prev.filter((p) => normName(p) !== normName(name)) : [...prev, normName(name)]));
+  const removeItem = (name) => { dirty.current.pantry = true; setPantry((prev) => prev.filter((p) => normName(p) !== normName(name))); };
+  const toggleItem = (name) => { dirty.current.pantry = true; setPantry((prev) => (prev.some((p) => normName(p) === normName(name)) ? prev.filter((p) => normName(p) !== normName(name)) : [...prev, normName(name)])); };
 
   return (
     <div className="app">
@@ -818,8 +828,8 @@ function App() {
 
       {keyRingOpen && (
         <KeyRing keys={keys} activeKeyId={activeKeyId} rememberKeys={rememberKeys}
-          onAdd={addKey} onRemove={removeKey} onActivate={setActiveKeyId}
-          onToggleRemember={() => setRememberKeys((v) => !v)} onClose={() => setKeyRingOpen(false)} />
+          onAdd={addKey} onRemove={removeKey} onActivate={activateKey}
+          onToggleRemember={toggleRemember} onClose={() => setKeyRingOpen(false)} />
       )}
 
       <SourcesFooter />
