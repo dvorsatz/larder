@@ -27,22 +27,6 @@ It's a single static HTML file: no build step, no server, no framework install. 
 
 ---
 
-## Run it
-
-### Option A — GitHub Pages (recommended)
-1. Create a new repository and add `index.html` (and this README/LICENSE) to the root.
-2. In the repo, go to **Settings → Pages**, set **Source: Deploy from a branch**, branch **main**, folder **/ (root)**, and Save.
-3. Open the published `https://<you>.github.io/<repo>/` URL.
-
-### Option B — Locally
-Serve it over HTTP (don't open the file directly — browser API calls and storage behave badly on `file://`):
-```bash
-python3 -m http.server 8000
-# then visit http://localhost:8000
-```
-
----
-
 ## The API key (required for the Chef)
 
 Larder is **bring-your-own-key**. The pantry, library matching, calories, and PDF export all work with **no key**. Only the AI features need one:
@@ -69,14 +53,6 @@ Recipes are original formulations developed *in the style of* these trusted kitc
 
 **Vegan & vegetarian:** Minimalist Baker · Oh She Glows · Rainbow Plant Life · The Full Helping · It Doesn't Taste Like Chicken · Bianca Zapatka · Cookie and Kate · Love and Lemons
 **Universal:** Serious Eats · NYT Cooking · BBC Good Food · Bon Appétit · Food Network
-
----
-
-## How it's built
-
-- One file, `index.html`. React 18 + Babel (in-browser) + jsPDF, all via CDN. No build or install.
-- Recipe engine is **hybrid**: a curated library matches first; the Chef fills gaps and adds to your saved collection.
-- Accessibility: colors were tuned for WCAG AA contrast, with non-color cues (shapes/labels) so meaning doesn't depend on red/green — relevant for color-vision deficiency.
 
 ## Disclaimers
 
