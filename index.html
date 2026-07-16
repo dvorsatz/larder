@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Larder — cook what's on your shelves</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.10/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  /* warm cream-linen ground — food reads appetizing on warm neutrals, never clinical white or blue */
+  --paper:#FBF7EF; --ink:#23271F; --muted:#5A5F57; --line:#EAE3D3; --card:#FFFDF9;
+  --oat:#F4EFE2; --tag-bg:#F1ECDE; --title:#2A6242;
+  /* health anchors — fresh produce greens */
+  --herb:#3A7D52; --leaf:#4F9D4E;
+  /* appetite triggers — warm reds/oranges/golds */
+  --saffron:#E0A21B; --roast:#A83E38; --tomato:#D6482B;
+  --tab-accent:var(--herb); --on-accent:#fff; --accent-ink:var(--herb);
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --disp:"Fraunces",Georgia,serif;
+  --body:"Inter",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased}
+body{line-height:1.5}
+a{color:inherit}
+button{font-family:inherit;cursor:pointer}
+::selection{background:#E4EBD8}
+
+.app{max-width:940px;margin:0 auto;padding:20px 18px 64px}
+
+/* masthead */
+.masthead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding-bottom:16px;border-bottom:1.5px solid var(--ink)}
+.brand{display:flex;align-items:center;gap:12px}
+.mark{font-size:30px;line-height:1;color:var(--tomato);transform:translateY(1px)}
+.masthead h1{font-family:var(--disp);font-weight:600;font-size:34px;letter-spacing:-.01em;margin:0;color:var(--title)}
+.tagline{margin:2px 0 0;font-size:13px;color:var(--muted);font-style:italic;font-family:var(--disp)}
+.pantry-count{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:right}
+.pantry-count span{display:inline-block;color:var(--herb);font-size:16px}
+.mast-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.keyring-btn{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--ink);background:var(--card);border:1.4px solid var(--line);border-radius:8px;padding:6px 11px}
+.keyring-btn:hover{border-color:var(--herb)}
+.keyring-btn.active{border-color:var(--herb)}
+.keyring-dot{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.keyring-btn.active .keyring-dot{background:var(--leaf)}
+.link-btn{background:none;border:none;padding:0;color:var(--accent-ink);font:inherit;font-weight:600;text-decoration:underline;cursor:pointer}
+.keyring-intro{font-size:13px;color:var(--ink);margin:0 0 8px}
+.keyring-warn{font-size:12px;color:var(--roast);background:#FBEEE9;border:1px solid #F0D8CF;border-radius:8px;padding:9px 11px;margin:0 0 14px}
+.key-add{display:flex;flex-direction:column;gap:8px}
+.key-list{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.key-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1.4px solid var(--line);border-radius:9px;padding:9px 11px;background:var(--card)}
+.key-item.on{border-color:var(--herb);background:#F1F6F1}
+.key-pick{display:flex;align-items:center;gap:9px;font-size:13px;cursor:pointer;flex:1;min-width:0}
+.key-label{font-weight:600}
+.key-mask{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.key-remove{background:none;border:none;color:var(--roast);font-size:12.5px;font-weight:600;cursor:pointer}
+.key-actions{display:flex;align-items:center;gap:12px;margin:6px 0 14px;font-size:13px}
+.remember-row{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--ink);border-top:1px solid var(--line);padding-top:14px}
+.remember-row .hint{display:inline}
+
+/* tabs */
+.tabs{display:flex;gap:2px;margin:18px 0 22px;flex-wrap:wrap}
+.tab{border:none;background:transparent;padding:9px 15px 12px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;transition:color .15s}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--ink);border-bottom-color:var(--tab-accent)}
+.tab:focus-visible{outline:2px solid var(--herb);outline-offset:2px;border-radius:3px}
+
+/* panel */
+.panel{--tab-accent:var(--herb)}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:18px}
+.panel-head h2{font-family:var(--disp);font-weight:600;font-size:25px;margin:0;color:var(--accent-ink)}
+.sub{margin:4px 0 0;color:var(--muted);font-size:13.5px;max-width:52ch}
+
+/* buttons */
+.btn-solid{background:var(--tab-accent);color:var(--on-accent);border:none;border-radius:8px;padding:10px 16px;font-weight:600;font-size:14px}
+.btn-solid:disabled{opacity:.55}
+.btn-solid.full{width:100%;margin-top:10px}
+.btn-ghost{background:transparent;border:1.5px solid var(--line);border-radius:8px;padding:9px 15px;font-weight:600;font-size:13.5px;color:var(--ink)}
+.btn-ghost:hover{border-color:var(--ink)}
+
+/* pantry add */
+.add-row{display:flex;gap:8px;margin-bottom:20px}
+.add-input{flex:1;border:1.5px solid var(--line);border-radius:8px;padding:11px 13px;font-size:15px;background:#fff}
+.add-input:focus{outline:none;border-color:var(--herb)}
+
+/* chips = pantry labels */
+.on-hand{background:var(--oat);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:22px}
+.shelf-label,.cat-label{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:9px}
+.cat{margin-bottom:16px}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font-family:var(--mono);font-size:12px;letter-spacing:.01em;background:#fff;border:1.4px solid var(--line);color:#40453d;border-radius:6px;padding:6px 10px;transition:all .12s}
+.chip:hover{border-color:var(--herb)}
+.chip-on{background:var(--tab-accent);border-color:var(--tab-accent);color:var(--on-accent)}
+.chip .x{margin-left:6px;opacity:.75;font-family:var(--body)}
+.foot-note{font-size:12.5px;color:var(--muted);margin-top:8px}
+
+/* controls */
+.controls{display:flex;flex-wrap:wrap;align-items:flex-end;gap:18px;background:var(--oat);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:18px}
+.ctrl{display:flex;flex-direction:column;gap:7px}
+.ctrl.grow{margin-left:auto;flex-direction:row;align-items:center;gap:8px}
+.ctrl-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.hint{font-size:11.5px;color:var(--muted)}
+.seg{display:inline-flex;background:#fff;border:1.4px solid var(--line);border-radius:8px;padding:3px;gap:2px}
+.seg.small{align-self:flex-start}
+.seg-btn{border:none;background:transparent;border-radius:6px;padding:7px 14px;font-size:13.5px;font-weight:600;color:var(--muted)}
+.seg-btn.on{background:var(--tab-accent);color:var(--on-accent)}
+.toggle{display:inline-flex;background:#fff;border:1.4px solid var(--line);border-radius:8px;padding:3px;font-size:13px;font-weight:600}
+.toggle span{padding:6px 12px;border-radius:6px;color:var(--muted)}
+.toggle span.on{background:var(--tab-accent);color:var(--on-accent)}
+
+.status{font-size:13px;color:var(--muted);margin:2px 0 12px}
+.research-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 16px}
+.btn-research{background:var(--card);border:1.5px solid var(--tab-accent);color:var(--accent-ink);border-radius:8px;padding:9px 15px;font-weight:600;font-size:13.5px}
+.btn-research:hover{background:var(--tab-accent);color:var(--on-accent)}
+.btn-research:disabled{opacity:.55}
+.research-note{font-size:12px;color:var(--muted);max-width:44ch}
+.err{font-size:13.5px;color:var(--roast);margin:4px 0 12px}
+.err::before{content:"\2715  ";font-weight:800}
+.ok{font-size:13.5px;color:var(--herb);margin:8px 0 0;font-weight:600}
+.ok::before{content:"\2713  ";font-weight:800}
+.empty{border:1.5px dashed var(--line);border-radius:12px;padding:30px;text-align:center;color:var(--muted);font-size:14px}
+.storage-warn{background:#FBEEE9;border:1.5px solid var(--roast);border-radius:12px;padding:12px 15px;font-size:13px;color:var(--ink);margin-bottom:18px;line-height:1.55}
+.backup-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--oat);border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin-bottom:18px}
+.backup-copy{font-size:12.5px;color:var(--muted);flex:1;min-width:220px}
+.backup-btns{display:flex;gap:8px}
+.backup-msg{flex-basis:100%;font-size:12px;color:var(--herb);font-weight:600}
+
+/* cards */
+.cards{display:flex;flex-direction:column;gap:14px}
+.card{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(30,25,20,.03)}
+.spine{width:6px;background:var(--tab-accent);flex:none}
+.card-body{padding:16px 18px;flex:1;min-width:0}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.card h3{font-family:var(--disp);font-weight:600;font-size:19px;margin:0 0 5px}
+.meta{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--muted);align-items:center}
+.tag{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;background:var(--tag-bg);color:#5a5f54;padding:3px 7px;border-radius:5px}
+.kcal{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.02em;color:var(--accent-ink);background:var(--oat);border:1px solid var(--line);padding:2px 7px;border-radius:5px}
+.cal-note{font-size:11.5px;color:var(--muted);font-style:italic;margin:12px 0 0}
+.flavor{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.02em;color:var(--roast);background:#FBEEE9;border:1px solid #F0D8CF;padding:2px 7px;border-radius:5px;text-transform:lowercase}
+.chef-blurb{font-family:var(--disp);font-style:italic;font-size:14.5px;line-height:1.5;color:var(--ink);margin:12px 0 0;padding:12px 14px;background:var(--oat);border-left:3px solid var(--tab-accent);border-radius:0 8px 8px 0}
+.chef-name{display:block;font-family:var(--mono);font-style:normal;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent-ink);margin-bottom:5px}
+.chef-key{border:1.6px solid var(--herb);background:linear-gradient(180deg,#F1F6F1,#FBF7EF);border-radius:14px;padding:16px 18px;margin-bottom:22px}
+.chef-key.connected{border-color:var(--line);background:var(--oat)}
+.chef-key-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.chef-key-title{font-family:var(--disp);font-weight:600;font-size:19px;color:var(--title)}
+.chef-key-note{font-size:13px;color:var(--ink);margin:5px 0 0;max-width:62ch}
+.chef-badge{flex:none;font-family:var(--mono);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:4px 8px;border-radius:6px;background:var(--herb);color:#fff}
+.chef-key.connected .chef-badge{background:var(--leaf);color:#1E2419}
+.chef-key-add{display:flex;gap:8px;align-items:center;margin:14px 0 10px;flex-wrap:wrap}
+.chef-key-add .add-input{flex:1;min-width:200px}
+.chef-key-fine{font-size:11.5px;color:var(--muted);margin:0}
+.pdf-btn{flex:none;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.03em;background:transparent;border:1.4px solid var(--line);border-radius:7px;padding:7px 11px;color:var(--ink)}
+.pdf-btn:hover{border-color:var(--accent-ink);color:var(--accent-ink)}
+.tobuy{margin-top:11px;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.buy-chip{font-family:var(--mono);font-size:11px;background:#FBEEDD;color:#8a6a1a;border-radius:5px;padding:3px 7px}
+.reveal{margin-top:12px;background:transparent;border:none;color:var(--accent-ink);font-weight:600;font-size:13px;padding:0}
+.reveal:hover{text-decoration:underline}
+.recipe{display:grid;grid-template-columns:1fr 1.3fr;gap:20px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.recipe h4{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 8px}
+.recipe ul,.recipe ol{margin:0;padding-left:18px}
+.recipe li{font-size:13.5px;margin-bottom:5px}
+.recipe li.miss{color:#8a6a1a}
+
+/* modal */
+.modal-scrim{position:fixed;inset:0;background:rgba(30,26,20,.42);display:flex;align-items:center;justify-content:center;padding:18px;z-index:50}
+.modal{background:var(--paper);border-radius:16px;width:100%;max-width:440px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.modal-head h3{font-family:var(--disp);font-weight:600;font-size:20px;margin:0}
+.x-btn{background:transparent;border:none;font-size:24px;line-height:1;color:var(--muted)}
+.paste-area{width:100%;min-height:120px;border:1.5px solid var(--line);border-radius:10px;padding:11px;font-size:14px;font-family:var(--body);resize:vertical;background:#fff}
+.paste-area:focus{outline:none;border-color:var(--herb)}
+.drop{text-align:center;border:1.5px dashed var(--line);border-radius:12px;padding:22px 16px}
+.drop p{font-size:13px;color:var(--muted);margin:0 0 14px}
+
+/* sources */
+.sources{margin-top:44px;padding-top:22px;border-top:1.5px solid var(--ink)}
+.sources h2{font-family:var(--disp);font-weight:600;font-size:20px;margin:0 0 6px}
+.src-note{font-size:12.5px;color:var(--muted);max-width:64ch;margin:0 0 16px}
+.src-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.src-head{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--herb);margin-bottom:9px}
+.src-list{display:flex;flex-direction:column;gap:6px}
+.src-list a{font-size:13.5px;text-decoration:none;color:var(--ink);width:fit-content;border-bottom:1px solid transparent}
+.src-list a:hover{border-bottom-color:var(--herb)}
+
+@media (max-width:620px){
+  .masthead h1{font-size:28px}
+  .recipe{grid-template-columns:1fr}
+  .src-grid{grid-template-columns:1fr}
+  .controls{gap:14px}
+  .ctrl.grow{margin-left:0;width:100%}
+  .ctrl.grow .btn-solid{flex:1}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ============================================================
+   LARDER — cook what's on your shelves
+   Hybrid recipe engine: curated library first, live AI fills gaps,
+   everything screened through a dietary-safety filter.
+   ============================================================ */
+
+/* ---------- Sources (13 total: 8 plant-based, 5 universal) ---------- */
+const SOURCES = [
+  { name: "Minimalist Baker", url: "https://minimalistbaker.com", kind: "plant" },
+  { name: "Oh She Glows", url: "https://ohsheglows.com", kind: "plant" },
+  { name: "Rainbow Plant Life", url: "https://rainbowplantlife.com", kind: "plant" },
+  { name: "The Full Helping", url: "https://www.thefullhelping.com", kind: "plant" },
+  { name: "It Doesn't Taste Like Chicken", url: "https://itdoesnttastelikechicken.com", kind: "plant" },
+  { name: "Bianca Zapatka", url: "https://biancazapatka.com", kind: "plant" },
+  { name: "Cookie and Kate", url: "https://cookieandkate.com", kind: "plant" },
+  { name: "Love and Lemons", url: "https://www.loveandlemons.com", kind: "plant" },
+  { name: "Serious Eats", url: "https://www.seriouseats.com", kind: "universal" },
+  { name: "NYT Cooking", url: "https://cooking.nytimes.com", kind: "universal" },
+  { name: "BBC Good Food", url: "https://www.bbcgoodfood.com", kind: "universal" },
+  { name: "Bon Appétit", url: "https://www.bonappetit.com", kind: "universal" },
+  { name: "Food Network", url: "https://www.foodnetwork.com", kind: "universal" },
+];
+const SOURCE_NAMES = SOURCES.map((s) => s.name);
+
+/* ---------- Common pantry catalogue ---------- */
+const PANTRY_CATALOGUE = [
+  { group: "Grains & starch", items: ["rice", "pasta", "bread", "flour", "oats", "quinoa", "couscous", "tortillas", "breadcrumbs", "noodles"] },
+  { group: "Legumes & proteins", items: ["black beans", "chickpeas", "lentils", "kidney beans", "white beans", "tofu", "tempeh", "peanut butter", "peas", "canned tuna", "eggs"] },
+  { group: "Vegetables", items: ["onion", "garlic", "carrots", "celery", "tomatoes", "spinach", "bell pepper", "broccoli", "mushrooms", "zucchini", "potatoes", "sweet potato", "kale", "cauliflower"] },
+  { group: "Fruit", items: ["lemon", "lime", "apple", "banana", "avocado"] },
+  { group: "Cans & jars", items: ["canned tomatoes", "coconut milk", "tomato paste", "olives", "corn", "vegetable broth", "salsa"] },
+  { group: "Dairy & alternatives", items: ["milk", "cheese", "yogurt", "butter", "almond milk", "oat milk"] },
+  { group: "Herbs & spices", items: ["salt", "pepper", "cumin", "paprika", "oregano", "basil", "chili flakes", "curry powder", "cinnamon", "turmeric", "garlic powder"] },
+  { group: "Oils & condiments", items: ["olive oil", "soy sauce", "vinegar", "honey", "maple syrup", "mustard", "hot sauce", "sesame oil"] },
+  { group: "Baking", items: ["sugar", "baking soda", "vanilla", "cocoa powder"] },
+  { group: "Proteins (meat & fish)", items: ["chicken", "beef", "pork", "sausage", "salmon", "shrimp", "bacon", "ground turkey"] },
+];
+
+const STAPLES = ["salt", "pepper", "water", "oil", "olive oil"]; // assumed always on hand
+
+/* ---------- Curated recipe library ---------- */
+const LIBRARY = [
+  // VEGAN
+  { id: "v1", diet: "vegan", title: "Chickpea & Spinach Coconut Curry", style: "Rainbow Plant Life", servings: 4, time: 30,
+    key: ["chickpeas", "spinach", "coconut milk", "onion", "garlic", "curry powder", "rice"],
+    display: ["1 onion, diced", "3 garlic cloves, minced", "2 tbsp curry powder", "1 can chickpeas, drained", "1 can coconut milk", "3 cups spinach", "cooked rice, to serve"],
+    steps: ["Sauté onion in oil until soft, then add garlic and curry powder for 1 min.", "Stir in chickpeas and coconut milk; simmer 12–15 min.", "Fold in spinach until wilted; season with salt.", "Serve over rice."] },
+  { id: "v2", diet: "vegan", title: "Golden Lentil Soup", style: "The Full Helping", servings: 4, time: 40,
+    key: ["lentils", "carrots", "celery", "onion", "garlic", "vegetable broth", "cumin"],
+    display: ["1 onion, diced", "2 carrots, diced", "2 celery stalks, diced", "1 cup red lentils", "1 tsp cumin", "6 cups vegetable broth"],
+    steps: ["Sweat onion, carrot and celery in oil, 6 min.", "Add garlic and cumin, 1 min.", "Add lentils and broth; simmer 25 min until soft.", "Blend partly for body; season and serve."] },
+  { id: "v3", diet: "vegan", title: "Peanut Noodle Stir-Fry", style: "It Doesn't Taste Like Chicken", servings: 3, time: 25,
+    key: ["noodles", "peanut butter", "soy sauce", "garlic", "lime", "bell pepper"],
+    display: ["200g noodles", "3 tbsp peanut butter", "2 tbsp soy sauce", "1 lime, juiced", "2 garlic cloves", "1 bell pepper, sliced"],
+    steps: ["Cook noodles; reserve a splash of water.", "Whisk peanut butter, soy sauce, lime and garlic into a sauce.", "Stir-fry pepper 3 min, add noodles and sauce, loosen with water.", "Toss and serve."] },
+  { id: "v4", diet: "vegan", title: "Smoky Black Bean Tacos", style: "Minimalist Baker", servings: 3, time: 20,
+    key: ["black beans", "tortillas", "onion", "garlic", "cumin", "paprika", "avocado", "lime"],
+    display: ["1 can black beans", "1/2 onion, diced", "1 tsp cumin", "1 tsp smoked paprika", "6 tortillas", "1 avocado", "lime wedges"],
+    steps: ["Sauté onion, add garlic, cumin and paprika.", "Add beans with a splash of water; mash lightly and simmer 8 min.", "Warm tortillas.", "Fill with beans, avocado and a squeeze of lime."] },
+  { id: "v5", diet: "vegan", title: "Roasted Veg & Quinoa Bowl", style: "Oh She Glows", servings: 3, time: 40,
+    key: ["quinoa", "sweet potato", "broccoli", "chickpeas", "olive oil", "lemon"],
+    display: ["1 cup quinoa", "1 sweet potato, cubed", "1 head broccoli", "1 can chickpeas", "olive oil", "1 lemon"],
+    steps: ["Roast sweet potato, broccoli and chickpeas with oil at 220°C, 25 min.", "Cook quinoa.", "Whisk lemon juice with oil for dressing.", "Build bowls and dress."] },
+  { id: "v6", diet: "vegan", title: "Tomato Basil Pasta", style: "Bianca Zapatka", servings: 4, time: 25,
+    key: ["pasta", "canned tomatoes", "garlic", "basil", "olive oil", "chili flakes"],
+    display: ["400g pasta", "1 can chopped tomatoes", "3 garlic cloves", "handful basil", "chili flakes", "olive oil"],
+    steps: ["Cook pasta.", "Gently fry garlic and chili in oil, add tomatoes; simmer 12 min.", "Toss pasta through sauce with a little pasta water.", "Finish with torn basil."] },
+
+  // VEGETARIAN (only cheese / yogurt / butter as animal products)
+  { id: "g1", diet: "vegetarian", title: "Cheesy Baked Ziti", style: "Cookie and Kate", servings: 4, time: 45,
+    key: ["pasta", "canned tomatoes", "garlic", "cheese", "basil"],
+    display: ["400g ziti or penne", "2 cans chopped tomatoes", "3 garlic cloves", "2 cups grated cheese", "basil"],
+    steps: ["Simmer garlic and tomatoes into a sauce, 15 min.", "Cook pasta to just under al dente; toss with sauce.", "Layer with cheese in a dish.", "Bake 200°C for 20 min until bubbling."] },
+  { id: "g2", diet: "vegetarian", title: "Halloumi & Veg Skewers", style: "Love and Lemons", servings: 3, time: 25,
+    key: ["cheese", "bell pepper", "zucchini", "olive oil", "lemon"],
+    display: ["250g halloumi, cubed", "1 bell pepper", "1 zucchini", "olive oil", "1 lemon"],
+    steps: ["Thread halloumi and vegetables onto skewers.", "Brush with oil; season.", "Grill or roast 220°C for 12–15 min, turning.", "Finish with lemon."] },
+  { id: "g3", diet: "vegetarian", title: "Yogurt Flatbreads with Spiced Chickpeas", style: "Cookie and Kate", servings: 4, time: 35,
+    key: ["flour", "yogurt", "chickpeas", "garlic", "cumin"],
+    display: ["2 cups flour", "1 cup yogurt", "1 can chickpeas", "2 garlic cloves", "1 tsp cumin"],
+    steps: ["Mix flour and yogurt into a dough; rest 10 min.", "Roll and dry-fry flatbreads 2 min per side.", "Sauté chickpeas with garlic and cumin.", "Pile chickpeas onto flatbreads."] },
+  { id: "g4", diet: "vegetarian", title: "Paneer Tikka Masala", style: "BBC Good Food", servings: 4, time: 40,
+    key: ["cheese", "canned tomatoes", "onion", "garlic", "butter", "curry powder", "yogurt", "rice"],
+    display: ["250g paneer, cubed", "1 can tomatoes", "1 onion", "2 tbsp butter", "2 tbsp curry powder", "1/2 cup yogurt", "rice to serve"],
+    steps: ["Fry onion and garlic in butter, add curry powder.", "Add tomatoes; simmer 15 min, then stir in yogurt off the heat.", "Add paneer and warm through.", "Serve with rice."] },
+  { id: "g5", diet: "vegetarian", title: "Cheesy Broccoli Rice Skillet", style: "Love and Lemons", servings: 4, time: 30,
+    key: ["rice", "broccoli", "cheese", "butter", "garlic"],
+    display: ["1 cup rice", "1 head broccoli", "1.5 cups cheese", "2 tbsp butter", "2 garlic cloves"],
+    steps: ["Cook rice.", "Steam broccoli until just tender.", "Melt butter with garlic, fold in rice, broccoli and cheese.", "Stir until melted and glossy."] },
+  { id: "g6", diet: "vegetarian", title: "Tomato & Cheese Toast", style: "Cookie and Kate", servings: 2, time: 15,
+    key: ["bread", "tomatoes", "cheese", "basil", "olive oil"],
+    display: ["4 slices bread", "2 tomatoes, sliced", "1 cup cheese", "basil", "olive oil"],
+    steps: ["Toast bread and drizzle with oil.", "Top with tomato and cheese.", "Grill until cheese melts.", "Finish with basil and pepper."] },
+
+  // MEAT & FISH
+  { id: "o1", diet: "omnivore", title: "Lemon Garlic Baked Salmon", style: "Serious Eats", servings: 2, time: 25,
+    key: ["salmon", "lemon", "garlic", "olive oil"],
+    display: ["2 salmon fillets", "1 lemon", "3 garlic cloves", "olive oil"],
+    steps: ["Rub salmon with oil, garlic, salt and pepper.", "Top with lemon slices.", "Bake 200°C for 12–15 min.", "Rest 2 min and serve."] },
+  { id: "o2", diet: "omnivore", title: "Weeknight Chicken Stir-Fry", style: "NYT Cooking", servings: 3, time: 25,
+    key: ["chicken", "soy sauce", "garlic", "bell pepper", "rice"],
+    display: ["400g chicken, sliced", "3 tbsp soy sauce", "3 garlic cloves", "1 bell pepper", "rice to serve"],
+    steps: ["Sear chicken in a hot pan until golden.", "Add pepper and garlic, 3 min.", "Add soy sauce and a splash of water; toss.", "Serve over rice."] },
+  { id: "o3", diet: "omnivore", title: "Classic Beef Chili", style: "Serious Eats", servings: 5, time: 50,
+    key: ["beef", "kidney beans", "canned tomatoes", "onion", "garlic", "cumin", "paprika"],
+    display: ["500g ground beef", "1 can kidney beans", "1 can tomatoes", "1 onion", "1 tbsp cumin", "1 tbsp paprika"],
+    steps: ["Brown beef; remove.", "Soften onion and garlic, add spices.", "Return beef with tomatoes and beans.", "Simmer 30 min; season."] },
+  { id: "o4", diet: "omnivore", title: "Tuna & White Bean Salad", style: "BBC Good Food", servings: 2, time: 10,
+    key: ["canned tuna", "white beans", "lemon", "olive oil", "onion"],
+    display: ["1 can tuna", "1 can white beans", "1 lemon", "olive oil", "1/4 red onion"],
+    steps: ["Drain tuna and beans.", "Whisk lemon and oil.", "Toss with thinly sliced onion.", "Season and serve."] },
+  { id: "o5", diet: "omnivore", title: "Egg Fried Rice", style: "Food Network", servings: 3, time: 20,
+    key: ["rice", "eggs", "soy sauce", "garlic", "carrots", "peas"],
+    display: ["3 cups cooked rice", "3 eggs", "2 tbsp soy sauce", "2 garlic cloves", "1 carrot", "1/2 cup peas"],
+    steps: ["Scramble eggs; set aside.", "Fry carrot, peas and garlic.", "Add rice and soy sauce; fry hot.", "Fold eggs back in."] },
+  { id: "o6", diet: "omnivore", title: "Sheet-Pan Sausage & Peppers", style: "Bon Appétit", servings: 4, time: 40,
+    key: ["sausage", "bell pepper", "onion", "olive oil", "potatoes"],
+    display: ["6 sausages", "2 bell peppers", "1 onion", "2 potatoes", "olive oil"],
+    steps: ["Chop everything; toss with oil, salt and pepper.", "Spread on a tray.", "Roast 220°C for 30 min, turning once.", "Serve hot."] },
+];
+
+/* ============================================================
+   DIETARY SAFETY FILTER  (highest-importance requirement)
+   Classifies each ingredient, then a recipe passes only if
+   every ingredient is permitted for the tab. Errs toward
+   rejection so a forbidden item is never shown.
+   ============================================================ */
+const PLANT_QUALIFIERS = ["almond", "oat", "soy", "soya", "coconut", "rice", "cashew", "hemp", "plant", "vegan", "nut", "peanut", "sun", "seed", "cocoa", "apple", "pumpkin", "walnut", "hazelnut", "macadamia", "flax", "chia", "just", "dairy-free", "dairyfree", "non-dairy", "nondairy", "tofu", "veggie", "impossible", "beyond", "mock", "faux", "mushroom"];
+
+const TERMS = {
+  meatfish: ["beef", "steak", "pork", "bacon", "ham", "sausage", "pepperoni", "prosciutto", "pancetta", "chorizo", "salami", "chicken", "turkey", "duck", "lamb", "veal", "goat", "bison", "venison", "meatball", "meatballs", "meat", "mince", "salmon", "tuna", "cod", "tilapia", "halibut", "trout", "sardine", "anchovy", "mackerel", "shrimp", "prawn", "crab", "lobster", "scallop", "oyster", "clam", "mussel", "squid", "calamari", "octopus", "fish", "seafood", "caviar", "roe", "lard", "tallow", "suet", "fish sauce", "oyster sauce", "worcestershire", "bone broth", "chicken broth", "beef broth", "chicken stock", "beef stock"],
+  gelatin: ["gelatin", "gelatine"],
+  egg: ["egg", "eggs", "egg white", "egg yolk", "mayonnaise", "mayo", "aioli", "meringue"],
+  cheese: ["cheese", "cheddar", "mozzarella", "parmesan", "parmigiano", "feta", "ricotta", "mascarpone", "gouda", "brie", "paneer", "halloumi", "cotija", "gruyere", "gruyère", "pecorino", "queso"],
+  yogurt: ["yogurt", "yoghurt", "kefir"],
+  butter: ["butter", "ghee"],
+  otherdairy: ["milk", "cream", "buttermilk", "half and half", "sour cream", "heavy cream", "whipping cream", "condensed milk", "evaporated milk", "whey", "casein", "custard", "clotted cream", "creme fraiche", "crème fraîche"],
+  honey: ["honey"],
+};
+
+function hasWord(text, term) {
+  if (term.indexOf(" ") !== -1) return text.indexOf(term) !== -1; // multiword: substring
+  const re = new RegExp("(^|[^a-z])" + term + "([^a-z]|$)");
+  return re.test(text);
+}
+function hasPlantQualifier(text) {
+  return PLANT_QUALIFIERS.some((q) => text.indexOf(q) !== -1);
+}
+
+/* returns one of: plant | meatfish | egg | cheese | yogurt | butter | otherdairy | honey | gelatin */
+function classifyIngredient(raw) {
+  let t = (" " + String(raw).toLowerCase() + " ").replace(/[,.;()/]/g, " ");
+  // hard exclusions of vegetable homonyms
+  const eggplant = t.indexOf("eggplant") !== -1;
+  const plantQ = hasPlantQualifier(t);
+  const creamOfTartar = t.indexOf("cream of tartar") !== -1;
+
+  // meat / fish
+  if (TERMS.meatfish.some((w) => hasWord(t, w))) {
+    if (!plantQ) return "meatfish";
+  }
+  if (TERMS.gelatin.some((w) => hasWord(t, w))) return "gelatin";
+  // egg (guard eggplant)
+  if (!eggplant && TERMS.egg.some((w) => hasWord(t, w))) {
+    if (!plantQ) return "egg";
+  }
+  // dairy families
+  if (TERMS.cheese.some((w) => hasWord(t, w)) && !plantQ) return "cheese";
+  if (TERMS.yogurt.some((w) => hasWord(t, w)) && !plantQ) return "yogurt";
+  if (TERMS.butter.some((w) => hasWord(t, w)) && !plantQ) return "butter";
+  if (!creamOfTartar && TERMS.otherdairy.some((w) => hasWord(t, w)) && !plantQ) return "otherdairy";
+  if (TERMS.honey.some((w) => hasWord(t, w)) && !plantQ) return "honey";
+  return "plant";
+}
+
+function recipeAllowedFor(diet, ingredientNames) {
+  const cats = ingredientNames.map(classifyIngredient);
+  if (diet === "vegan") return cats.every((c) => c === "plant");
+  if (diet === "vegetarian") return cats.every((c) => c === "plant" || c === "cheese" || c === "yogurt" || c === "butter");
+  return true; // omnivore
+}
+
+/* ---------- Pantry matching ---------- */
+function normName(s) { return String(s).toLowerCase().trim(); }
+function isStaple(k) { return STAPLES.some((s) => normName(k).indexOf(s) !== -1 || s.indexOf(normName(k)) !== -1); }
+function pantryHas(pantry, k) {
+  const key = normName(k);
+  return pantry.some((p) => {
+    const pn = normName(p);
+    return pn === key || pn.indexOf(key) !== -1 || key.indexOf(pn) !== -1;
+  });
+}
+function missingFor(recipe, pantry) {
+  return recipe.key.filter((k) => !isStaple(k) && !pantryHas(pantry, k));
+}
+
+/* ============================================================
+   CALORIE ESTIMATOR  (approximate)
+   Parses each ingredient line -> quantity + unit + food ->
+   grams -> kcal via a food-energy table. Transparent + capped.
+   ============================================================ */
+
+/* kcal per 100 g. Grains/legumes/pasta are DRY-weight values
+   (that's how recipes list "1 cup rice", "400g pasta"). */
+var KCAL_100 = {
+  "olive oil":884,"sesame oil":884,"vegetable oil":884,"oil":884,
+  "peanut butter":588,"butter":717,"ghee":900,
+  "maple syrup":260,"honey":304,"sugar":387,"cocoa powder":228,"vanilla":288,
+  "curry powder":325,"paprika":282,"cumin":375,"chili flakes":282,"oregano":265,
+  "cinnamon":247,"turmeric":312,"garlic powder":331,"pepper":251,"salt":0,"baking soda":0,
+  "soy sauce":60,"vinegar":20,"mustard":66,"hot sauce":20,"salsa":36,"tomato paste":82,
+  "flour":364,"breadcrumbs":395,"bread":265,"tortillas":310,"tortilla":310,"oats":389,
+  "rice":360,"pasta":371,"noodles":350,"quinoa":368,"couscous":376,
+  "spaghetti":371,"penne":371,"ziti":371,"macaroni":371,"rigatoni":371,"fusilli":371,
+  "linguine":371,"fettuccine":371,"vegetable broth":8,"broth":8,"stock":8,"scallion":32,
+  "chickpeas":139,"black beans":132,"kidney beans":127,"white beans":130,"beans":130,
+  "lentils":352,"peas":81,"tofu":144,"tempeh":192,
+  "onion":40,"garlic":149,"carrots":41,"carrot":41,"celery":16,"tomatoes":18,
+  "canned tomatoes":32,"tomato":18,"spinach":23,"kale":49,"bell pepper":31,
+  "broccoli":34,"cauliflower":25,"mushrooms":22,"zucchini":17,"potatoes":77,"potato":77,
+  "sweet potato":86,"corn":96,"olives":115,"avocado":160,"eggplant":25,
+  "lemon":29,"lime":30,"apple":52,"banana":89,
+  "cheese":402,"halloumi":321,"paneer":296,"mozzarella":300,"parmesan":431,"feta":264,
+  "yogurt":61,"milk":42,"almond milk":15,"oat milk":45,"coconut milk":197,"cream":195,
+  "chicken":165,"beef":250,"pork":242,"sausage":300,"bacon":541,"ham":145,
+  "salmon":208,"tuna":116,"cod":82,"shrimp":99,"prawn":99,"eggs":143,"egg":143,
+  "turkey":170,"ground turkey":170,"basil":23,"parsley":36,"cilantro":23,"ginger":80
+};
+
+/* grams for one countable unit, by food (substring keyed) */
+var COUNT_G = {
+  "onion":150,"garlic":5,"carrot":60,"celery":40,"tomato":120,"bell pepper":150,
+  "potato":170,"sweet potato":200,"lemon":100,"lime":67,"apple":180,"banana":118,
+  "avocado":150,"zucchini":200,"egg":50,"salmon":170,"sausage":75,"tortilla":45,
+  "bread":30,"broccoli":400,"cauliflower":500,"eggplant":300,"chicken":170,"mushroom":20,
+  "pepper":150
+};
+/* grams for one "can", by food */
+var CAN_G = { "chickpeas":240,"black beans":150,"kidney beans":150,"white beans":150,"beans":150,
+  "tomatoes":400,"tomato":400,"coconut milk":400,"corn":150,"tuna":145,"olives":120 };
+/* grams per US cup, by food (more reliable than a blanket density) */
+var CUP_G = {
+  "rice":185,"pasta":100,"noodles":100,"quinoa":170,"couscous":175,"oats":90,"flour":125,
+  "sugar":200,"breadcrumbs":108,"cheese":110,"spinach":30,"kale":40,"broccoli":90,
+  "cauliflower":100,"peas":145,"corn":165,"mushrooms":70,"chickpeas":164,"black beans":172,
+  "kidney beans":177,"white beans":179,"beans":175,"lentils":192,"yogurt":245,"cocoa powder":100,
+  "olives":135
+};
+/* fallback density g/ml for volume when no CUP_G entry */
+var DENSITY = { "oil":0.92,"sesame oil":0.92,"olive oil":0.92,"honey":1.42,"maple syrup":1.32,
+  "soy sauce":1.1,"milk":1.03,"almond milk":1.03,"oat milk":1.03,"coconut milk":1.0,
+  "peanut butter":1.05,"cream":1.0,"tomato paste":1.1 };
+
+var MASS_G = { g:1, gram:1, grams:1, kg:1000, oz:28.35, lb:453.6, lbs:453.6, pound:453.6, pounds:453.6 };
+var VOL_ML = { ml:1, l:1000, liter:1000, litre:1000, cup:240, cups:240, tbsp:15, tablespoon:15,
+  tablespoons:15, tsp:5, teaspoon:5, teaspoons:5, "fl_oz":30 };
+var UNIT_ALIAS = { g:"g",gram:"g",grams:"g",kg:"kg",oz:"oz",lb:"lb",lbs:"lb",pound:"lb",pounds:"lb",
+  ml:"ml",l:"l",liter:"l",litre:"l",cup:"cup",cups:"cup",tbsp:"tbsp",tablespoon:"tbsp",
+  tablespoons:"tbsp",tsp:"tsp",teaspoon:"tsp",teaspoons:"tsp",can:"can",cans:"can",clove:"clove",
+  cloves:"clove",slice:"slice",slices:"slice",fillet:"fillet",fillets:"fillet",head:"head",
+  handful:"handful",pinch:"pinch",bunch:"bunch",stalk:"stalk",stalks:"stalk" };
+
+/* when a fat/condiment/spice/herb is listed with no amount, assume a small
+   drizzle/sprinkle rather than a whole 100 g */
+var SEASON_G = {
+  "olive oil":14,"sesame oil":14,"vegetable oil":14,"oil":14,"butter":14,"ghee":14,
+  "soy sauce":15,"vinegar":15,"honey":21,"maple syrup":20,"mustard":10,"hot sauce":6,
+  "salsa":30,"tomato paste":30,"salt":1,"pepper":1,"cumin":3,"paprika":3,"curry powder":4,
+  "oregano":2,"chili flakes":2,"cinnamon":3,"turmeric":3,"garlic powder":3,"cocoa powder":6,
+  "basil":5,"parsley":4,"cilantro":4,"ginger":6
+};
+
+var PREP = /\b(diced|minced|chopped|sliced|drained|grated|cubed|to serve|to taste|torn|thinly|cooked|fresh|large|small|medium|red|green|ripe|of|for|garnish|optional|plus|extra)\b/g;
+
+function dbLookup(map, food) {
+  if (map[food] != null) return map[food];
+  var best = null, bestLen = 0;
+  for (var k in map) { if (food.indexOf(k) !== -1 && k.length > bestLen) { best = map[k]; bestLen = k.length; } }
+  return best;
+}
+
+function parseIngredient(str) {
+  var s = String(str).toLowerCase().replace(/[()]/g, " ").trim();
+  var qty = null, hadQty = false;
+  s = s.replace(/^(\d+(?:\.\d+)?)\s*[\u2013-]\s*\d+(?:\.\d+)?/, "$1"); // range -> first
+  var mm = s.match(/^(\d+)\s+(\d+)\/(\d+)\b/);
+  if (mm) { qty = (+mm[1]) + (+mm[2]) / (+mm[3]); s = s.slice(mm[0].length).trim(); hadQty = true; }
+  else { var fr = s.match(/^(\d+)\/(\d+)\b/); if (fr) { qty = (+fr[1]) / (+fr[2]); s = s.slice(fr[0].length).trim(); hadQty = true; }
+    else { var dc = s.match(/^(\d+(?:\.\d+)?)/); if (dc) { qty = +dc[1]; s = s.slice(dc[0].length).trim(); hadQty = true; } } }
+  var unit = "count";
+  var fw = s.match(/^([a-z]+)/);
+  if (fw && UNIT_ALIAS[fw[1]]) { unit = UNIT_ALIAS[fw[1]]; s = s.slice(fw[1].length).trim(); }
+  if (qty === null) { qty = 1; if (fw && ["handful", "pinch", "bunch"].indexOf(fw[1]) !== -1) unit = UNIT_ALIAS[fw[1]]; }
+  var food = s.split(",")[0].replace(PREP, " ").replace(/\s+/g, " ").trim();
+  return { qty: qty, unit: unit, food: food, hadQty: hadQty };
+}
+
+function ingredientGrams(p) {
+  var f = p.food, u = p.unit, q = p.qty;
+  if (MASS_G[u]) return q * MASS_G[u];
+  if (VOL_ML[u]) {
+    var cup = dbLookup(CUP_G, f);
+    if (u === "cup" && cup != null) return q * cup;
+    var dens = dbLookup(DENSITY, f); if (dens == null) dens = 0.6;
+    if (u === "cup" && cup == null) return q * 240 * dens;
+    return q * VOL_ML[u] * dens;
+  }
+  if (u === "can") { var cg = dbLookup(CAN_G, f); return q * (cg != null ? cg : 400); }
+  if (u === "clove") return q * 5;
+  if (u === "slice") return q * 25;
+  if (u === "fillet") return q * 170;
+  if (u === "head") return q * (dbLookup(COUNT_G, f) || 400);
+  if (u === "handful") return q * 20;
+  if (u === "pinch") return q * 0.5;
+  if (u === "bunch") return q * 60;
+  if (u === "stalk") return q * 40;
+  // count
+  if (!p.hadQty) { var sg = dbLookup(SEASON_G, f); if (sg != null) return q * sg; }
+  var cw = dbLookup(COUNT_G, f);
+  return q * (cw != null ? cw : 100);
+}
+
+/* ingredients: array of strings OR {name}. Returns rounded perServing/total + coverage. */
+function estimateCalories(ingredients, servings) {
+  servings = servings || 1;
+  var total = 0, known = 0, count = 0;
+  ingredients.forEach(function (ing) {
+    var name = typeof ing === "string" ? ing : (ing.name || "");
+    if (!name) return;
+    count++;
+    var p = parseIngredient(name);
+    if (!p.food) return;
+    var kcal100 = dbLookup(KCAL_100, p.food);
+    if (kcal100 == null) return;            // unknown food -> not counted (flag via coverage)
+    known++;
+    var grams = ingredientGrams(p);
+    total += grams / 100 * kcal100;
+  });
+  var perServing = total / servings;
+  // sane clamp so a parse miss never shows something absurd
+  perServing = Math.max(40, Math.min(1600, perServing));
+  return {
+    perServing: Math.round(perServing / 5) * 5,
+    total: Math.round((perServing * servings) / 5) * 5,
+    coverage: count ? known / count : 0
+  };
+}
+
+
+/* ---------- Normalise any recipe into a common render shape ---------- */
+function normalizeLibrary(r, pantry) {
+  const missing = missingFor(r, pantry);
+  const cal = estimateCalories(r.display, r.servings);
+  return {
+    id: r.id, source: r.researched ? "Saved" : "Library", title: r.title, style: r.style, servings: r.servings,
+    time: r.time, ingredients: r.display.map((d) => ({ name: d, have: true })),
+    steps: r.steps, missing, kcal: cal.perServing, kcalTotal: cal.total, kcalCoverage: cal.coverage,
+    blurb: r.blurb || "", flavor: r.flavor || "",
+  };
+}
+
+/* ============================================================
+   AI GAP-FILLER  (single recipe per call; validated on return)
+   ============================================================ */
+function dietRuleText(diet) {
+  if (diet === "vegan")
+    return "The recipe must be 100% VEGAN. Absolutely NO animal products: no meat, poultry, fish, seafood, eggs, dairy (milk, cheese, butter, yogurt, cream, ghee), honey or gelatin. You MAY use plant-based substitutes such as tofu, tempeh, seitan, jackfruit, Impossible/Beyond, vegan cheese/butter, plant milks, aquafaba, lentils, chickpeas, falafel.";
+  if (diet === "vegetarian")
+    return "The recipe must be VEGETARIAN. The ONLY animal products allowed are cheese, yogurt and butter. Do NOT use meat, poultry, fish, seafood, eggs, milk, cream, ghee, honey or gelatin. Everything else must be plant-based.";
+  return "The recipe should feature an animal protein (fish, red meat, poultry or lean meat). Any ingredients are allowed.";
+}
+
+/* When a user key is present (standalone deployments) attach the
+   browser-CORS auth headers. Inside Claude.ai no key is needed — the
+   keyless call is proxied. */
+function anthropicHeaders(apiKey) {
+  const h = { "Content-Type": "application/json" };
+  if (apiKey) {
+    h["x-api-key"] = apiKey;
+    h["anthropic-version"] = "2023-06-01";
+    h["anthropic-dangerous-direct-browser-access"] = "true";
+  }
+  return h;
+}
+
+/* shared: validate + safety-check + normalize one AI recipe object */
+function normalizeAIRecipe(obj, diet) {
+  if (!obj || !Array.isArray(obj.ingredients) || !Array.isArray(obj.steps)) return null;
+  const names = obj.ingredients.map((i) => i.name || "");
+  if (!recipeAllowedFor(diet, names)) return null;   // SAFETY re-check on model output
+  const missing = obj.ingredients.filter((i) => i.have === false).map((i) => i.name);
+  const cal = estimateCalories(obj.ingredients.map((i) => i.name), obj.servings || 4);
+  return {
+    id: "ai-" + Math.random().toString(36).slice(2, 9),
+    source: "AI", title: obj.title || "Recipe", style: obj.style || "AI",
+    servings: obj.servings || 4, time: obj.time || 30,
+    blurb: obj.blurb || "", flavor: obj.flavor || "",
+    heroes: Array.isArray(obj.heroes) ? obj.heroes : [],
+    ingredients: obj.ingredients.map((i) => ({ name: i.name, have: i.have !== false })),
+    steps: obj.steps, missing, kcal: cal.perServing, kcalTotal: cal.total, kcalCoverage: cal.coverage,
+  };
+}
+
+function heroWeightText(heroWeights) {
+  const entries = Object.entries(heroWeights || {}).filter(([, n]) => n > 0);
+  if (!entries.length) return "";
+  const list = entries.sort((a, b) => b[1] - a[1]).map(([h, n]) => `${h} (starred ${n}x)`).join(", ");
+  return `\n- HERO ROTATION (this batch only): these pantry items already star in other recipes this round — do NOT make them the hero of this one. They may still appear in minor supporting roles. De-prioritized: ${list}. Choose different hero ingredients from the pantry.`;
+}
+
+async function generateOneRecipe({ diet, pantry, strict, avoid, apiKey, heroWeights }) {
+  const modeText = strict
+    ? "Use ONLY ingredients from the pantry list plus basic staples (salt, pepper, water, oil). Do not require anything not in the pantry."
+    : "Prefer pantry ingredients. You may add up to 3 ingredients that are NOT in the pantry; mark those with have=false.";
+  const prompt =
+`You are Chef Boye R. Dee — a punchy, confident chef who builds recipes from whatever's in the pantry. Develop ONE recipe.
+
+PANTRY: ${pantry.join(", ") || "(empty)"}
+
+RULES:
+- ${dietRuleText(diet)}
+- ${modeText}
+- Set "style" to one of these real sources: ${SOURCE_NAMES.join(", ")}.
+- Avoid these titles: ${avoid.join("; ") || "none"}.
+- "heroes": the 1-3 MAIN ingredients this dish is built around.
+- "blurb": your description of the dish in your punchy chef voice — 4 to 5 short sentences MAX.
+- "flavor": a brief flavor-profile estimate, e.g. "smoky, tangy, herby".
+- Keep steps to 5 max and terse. Be concise to keep this small.${heroWeightText(heroWeights)}
+
+Respond with ONLY a JSON object, no markdown, in this shape:
+{"title":"...","style":"Source name","servings":4,"time":30,"flavor":"...","blurb":"...","heroes":["..."],"ingredients":[{"name":"1 onion, diced","have":true}],"steps":["...","..."]}`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: anthropicHeaders(apiKey),
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!res.ok) throw new Error("Recipe service unavailable (" + res.status + ")");
+  const data = await res.json();
+  const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  let clean = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const start = clean.indexOf("{"); const end = clean.lastIndexOf("}");
+  if (start !== -1 && end !== -1) clean = clean.slice(start, end + 1);
+  let obj;
+  try { obj = JSON.parse(clean); } catch (e) { return null; }
+  return normalizeAIRecipe(obj, diet);
+}
+
+/* one batched call drafting N recipes with internal diversification */
+async function generateRecipeBatch({ diet, pantry, strict, avoid, apiKey, n }) {
+  const modeText = strict
+    ? "Use ONLY ingredients from the pantry list plus basic staples (salt, pepper, water, oil). Do not require anything not in the pantry."
+    : "Prefer pantry ingredients. You may add up to 3 ingredients per recipe that are NOT in the pantry; mark those with have=false.";
+  const prompt =
+`You are Chef Boye R. Dee — a punchy, confident chef who builds recipes from whatever's in the pantry. Develop ${n} DIFFERENT recipes.
+
+PANTRY: ${pantry.join(", ") || "(empty)"}
+
+RULES:
+- ${dietRuleText(diet)}
+- ${modeText}
+- CRITICAL VARIETY RULE: each recipe must be built around DIFFERENT hero ingredients — no two recipes in this batch may share the same star ingredient or be similar dishes. Rotate through the pantry.
+- Set each "style" to one of these real sources: ${SOURCE_NAMES.join(", ")}.
+- Avoid these titles: ${avoid.join("; ") || "none"}.
+- Per recipe: "heroes" = its 1-3 MAIN ingredients; "blurb" = 4-5 punchy sentences MAX; "flavor" = brief profile; steps 5 max, terse. Be concise.
+
+Respond with ONLY a JSON array of ${n} objects, no markdown, each in this shape:
+{"title":"...","style":"Source name","servings":4,"time":30,"flavor":"...","blurb":"...","heroes":["..."],"ingredients":[{"name":"1 onion, diced","have":true}],"steps":["...","..."]}`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: anthropicHeaders(apiKey),
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: Math.min(4000, 700 * n + 600),
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!res.ok) throw new Error("Recipe service unavailable (" + res.status + ")");
+  const data = await res.json();
+  const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  let clean = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const s = clean.indexOf("["), e = clean.lastIndexOf("]");
+  if (s !== -1 && e !== -1) clean = clean.slice(s, e + 1);
+  let arr;
+  try { arr = JSON.parse(clean); } catch (err) { return []; }
+  if (!Array.isArray(arr)) return [];
+  return arr.map((o) => normalizeAIRecipe(o, diet)).filter(Boolean);
+}
+
+/* ============================================================
+   REDUNDANCY AUDITOR — per-request, resets every batch
+   Flags near-duplicate recipes (title similarity) and repeated
+   hero ingredients (soft: offenders regenerate with the used
+   heroes down-weighted, never excluded).
+   ============================================================ */
+const HERO_EXCLUDE = new Set(["oil", "olive oil", "vegetable oil", "sesame oil", "salt", "pepper", "water", "garlic", "onion", "red onion", "spring onion", "scallion", "shallot", "lemon", "lime", "vinegar", "soy sauce", "hot sauce", "mustard", "sugar", "flour", "butter", "baking soda", "vanilla", "cumin", "paprika", "smoked paprika", "oregano", "basil", "parsley", "cilantro", "chili flakes", "curry powder", "cinnamon", "turmeric", "garlic powder", "ginger", "maple syrup", "honey", "tomato paste", "vegetable broth", "broth", "stock"]);
+function heroesOf(rec) {
+  let hs = Array.isArray(rec.heroes) ? rec.heroes.map((h) => normName(h)).filter(Boolean) : [];
+  if (!hs.length) hs = rec.ingredients.map((i) => parseIngredient(i.name).food).filter(Boolean);
+  hs = hs.filter((h) => !HERO_EXCLUDE.has(h));
+  return [...new Set(hs)].slice(0, 3);
+}
+const TITLE_STOP = new Set(["with", "and", "the", "a", "an", "of", "in", "style", "easy", "quick", "simple", "classic", "weeknight", "skillet"]);
+function titleTokens(t) { return new Set(String(t).toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).map((w) => w.replace(/(ies|es|s)$/, "")).filter((w) => w.length > 1 && !TITLE_STOP.has(w))); }
+function titleSim(a, b) {
+  const A = titleTokens(a), B = titleTokens(b);
+  if (!A.size || !B.size) return 0;
+  let inter = 0; A.forEach((x) => { if (B.has(x)) inter++; });
+  return inter / (A.size + B.size - inter);
+}
+function isRedundant(a, b) {
+  if (titleSim(a.title, b.title) >= 0.6) return true;
+  const ha = a._heroes || [], hb = b._heroes || [];
+  if (!ha.length || !hb.length) return false;
+  const S = new Set(ha); let shared = 0; hb.forEach((x) => { if (S.has(x)) shared++; });
+  return shared / Math.min(ha.length, hb.length) >= 0.5;
+}
+/* audit a fresh batch: keep first occurrences, flag later redundant ones,
+   and count hero usage among the keepers (the per-request weight table) */
+function auditBatch(recipes) {
+  const keep = [], offenders = [], heroCounts = {};
+  for (const r of recipes) {
+    r._heroes = heroesOf(r);
+    if (keep.some((k) => isRedundant(k, r))) { offenders.push(r); continue; }
+    keep.push(r);
+    r._heroes.forEach((h) => { heroCounts[h] = (heroCounts[h] || 0) + 1; });
+  }
+  return { keep, offenders, heroCounts };
+}
+
+/* ============================================================
+   PDF EXPORT (jsPDF)
+   ============================================================ */
+function slug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+function downloadPdf(r) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const M = 56, W = 595 - M * 2; let y = 64;
+  doc.setFont("times", "bold"); doc.setFontSize(22);
+  doc.text(doc.splitTextToSize(r.title, W), M, y); y += 30;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(110);
+  doc.text(`Inspired by ${r.style}  ·  Serves ${r.servings}  ·  ${r.time} min  ·  ~${r.kcal} kcal/serving`, M, y); y += 18;
+  if (r.flavor) { doc.setFont("helvetica", "italic"); doc.text(doc.splitTextToSize("Flavor: " + r.flavor, W), M, y); y += 16; doc.setFont("helvetica", "normal"); }
+  if (r.blurb) { doc.setFont("helvetica", "italic"); doc.setTextColor(90); const bl = doc.splitTextToSize(r.blurb, W); doc.text(bl, M, y); y += 13 * bl.length + 6; doc.setFont("helvetica", "normal"); doc.setTextColor(110); }
+  y += 4;
+  doc.setDrawColor(210); doc.line(M, y, M + W, y); y += 22;
+  doc.setTextColor(30); doc.setFont("helvetica", "bold"); doc.setFontSize(13);
+  doc.text("Ingredients", M, y); y += 18;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(11);
+  r.ingredients.forEach((i) => {
+    const line = "•  " + i.name + (i.have === false ? "   (to buy)" : "");
+    const wrapped = doc.splitTextToSize(line, W);
+    doc.text(wrapped, M, y); y += 15 * wrapped.length;
+  });
+  y += 12; doc.setFont("helvetica", "bold"); doc.setFontSize(13);
+  doc.text("Method", M, y); y += 18;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(11);
+  r.steps.forEach((s, idx) => {
+    if (y > 760) { doc.addPage(); y = 64; }
+    const wrapped = doc.splitTextToSize((idx + 1) + ".  " + s, W);
+    doc.text(wrapped, M, y); y += 15 * wrapped.length + 4;
+  });
+  doc.setFontSize(8); doc.setTextColor(150);
+  doc.text("Made with Larder · recipe developed in the style of the cited source", M, 812);
+  doc.save(slug(r.title) + ".pdf");
+}
+
+/* ============================================================
+   PERSISTENCE — durable, multi-backend
+   Every save writes a timestamped envelope to ALL available
+   backends: Claude's window.storage (artifact preview),
+   localStorage, and IndexedDB. Loads read every copy, pick the
+   newest valid one, and heal any backend that's missing/stale.
+   localStorage also keeps a previous-value snapshot to survive
+   a corrupted write. navigator.storage.persist() is requested
+   so browsers avoid evicting under storage pressure.
+   ============================================================ */
+const HAS_WSTORAGE = typeof window !== "undefined" && window.storage && typeof window.storage.get === "function";
+const HAS_LS = (function () { try { const k = "larder:probe"; localStorage.setItem(k, "1"); localStorage.removeItem(k); return true; } catch (e) { return false; } })();
+const HAS_IDB = typeof indexedDB !== "undefined";
+const memStore = {};
+
+const storageHealth = { ephemeral: false, reason: "" };
+try { if (typeof location !== "undefined" && location.protocol === "file:") { storageHealth.ephemeral = true; storageHealth.reason = "file"; } } catch (e) {}
+if (!HAS_LS && !HAS_IDB && !HAS_WSTORAGE) { storageHealth.ephemeral = true; storageHealth.reason = storageHealth.reason || "blocked"; }
+try { if (typeof navigator !== "undefined" && navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+
+function idbOpen() {
+  return new Promise((res, rej) => {
+    try { const q = indexedDB.open("larder-db", 1);
+      q.onupgradeneeded = () => { q.result.createObjectStore("kv"); };
+      q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+    } catch (e) { rej(e); }
+  });
+}
+async function idbGet(key) {
+  if (!HAS_IDB) return null;
+  try { const db = await idbOpen();
+    return await new Promise((res) => { const rq = db.transaction("kv", "readonly").objectStore("kv").get(key);
+      rq.onsuccess = () => res(rq.result == null ? null : String(rq.result)); rq.onerror = () => res(null); });
+  } catch (e) { return null; }
+}
+async function idbSet(key, val) {
+  if (!HAS_IDB) return;
+  try { const db = await idbOpen();
+    await new Promise((res) => { const tx = db.transaction("kv", "readwrite"); tx.objectStore("kv").put(val, key);
+      tx.oncomplete = res; tx.onerror = res; tx.onabort = res; });
+  } catch (e) {}
+}
+async function idbDel(key) {
+  if (!HAS_IDB) return;
+  try { const db = await idbOpen();
+    await new Promise((res) => { const tx = db.transaction("kv", "readwrite"); tx.objectStore("kv").delete(key);
+      tx.oncomplete = res; tx.onerror = res; tx.onabort = res; });
+  } catch (e) {}
+}
+
+function pack(data, t) { return JSON.stringify({ v: 1, t: t || Date.now(), data }); }
+function unpackAny(s) {
+  try { const o = JSON.parse(s);
+    if (o && o.v === 1 && "data" in o) return { t: o.t || 0, data: o.data };
+    return { t: 0, data: o }; // legacy plain value -> migrate
+  } catch (e) { return null; }
+}
+
+async function duraSetRaw(key, packed) {
+  if (HAS_WSTORAGE) { try { await window.storage.set(key, packed, false); } catch (e) {} }
+  if (HAS_LS) { try { const old = localStorage.getItem(key); if (old != null) localStorage.setItem(key + ":prev", old); localStorage.setItem(key, packed); } catch (e) {} }
+  await idbSet(key, packed);
+  memStore[key] = packed;
+}
+async function duraSet(key, data) { await duraSetRaw(key, pack(data)); }
+async function duraDel(key) {
+  if (HAS_WSTORAGE) { try { await window.storage.delete(key, false); } catch (e) {} }
+  if (HAS_LS) { try { localStorage.removeItem(key); localStorage.removeItem(key + ":prev"); } catch (e) {} }
+  await idbDel(key); delete memStore[key];
+}
+async function duraGet(key) {
+  const cands = [];
+  if (HAS_WSTORAGE) { try { const r = await window.storage.get(key, false); if (r && r.value != null) cands.push(unpackAny(r.value)); } catch (e) {} }
+  if (HAS_LS) { try { const v = localStorage.getItem(key); if (v != null) cands.push(unpackAny(v));
+    const pv = localStorage.getItem(key + ":prev"); if (pv != null) cands.push(unpackAny(pv)); } catch (e) {} }
+  const iv = await idbGet(key); if (iv != null) cands.push(unpackAny(iv));
+  if (memStore[key] != null) cands.push(unpackAny(memStore[key]));
+  const valid = cands.filter((c) => c && c.data != null);
+  if (!valid.length) return null;
+  valid.sort((a, b) => b.t - a.t);
+  const best = valid[0];
+  duraSetRaw(key, pack(best.data, best.t || Date.now())); // heal missing/stale backends
+  return best.data;
+}
+
+async function savePantry(items) { await duraSet("larder:pantry", items); }
+async function loadPantry() { return await duraGet("larder:pantry"); }
+async function saveResearched(items) { await duraSet("larder:researched", items); }
+async function loadResearched() { return await duraGet("larder:researched"); }
+async function saveKeys(payload) { if (payload) await duraSet("larder:keys", payload); else await duraDel("larder:keys"); }
+async function loadKeys() { return await duraGet("larder:keys"); }
+async function testApiKey(apiKey) {
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST", headers: anthropicHeaders(apiKey),
+      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 8, messages: [{ role: "user", content: "Reply with the single word: ok" }] }),
+    });
+    return res.ok;
+  } catch (e) { return false; }
+}
+function maskKey(v) { return v && v.length > 12 ? v.slice(0, 7) + "…" + v.slice(-4) : "•••• " + (v || "").slice(-4); }
+/* turn a generated AI recipe into a library-shaped record that the matcher
+   can reuse: derive `key` foods (via the calorie parser) and `display` lines */
+function toSavedRecipe(rec, diet) {
+  return {
+    id: rec.id, diet, title: rec.title, style: rec.style, servings: rec.servings, time: rec.time,
+    key: rec.ingredients.map((i) => parseIngredient(i.name).food).filter(Boolean),
+    display: rec.ingredients.map((i) => i.name),
+    steps: rec.steps, researched: true, blurb: rec.blurb || "", flavor: rec.flavor || "",
+  };
+}
+
+/* ============================================================
+   UI
+   ============================================================ */
+const TABS = [
+  { id: "pantry", label: "Pantry", accent: "var(--herb)", onAccent: "#fff", ink: "var(--herb)" },
+  { id: "vegan", label: "Vegan", accent: "var(--leaf)", onAccent: "#1E2419", ink: "#2F7439" },
+  { id: "vegetarian", label: "Vegetarian", accent: "var(--saffron)", onAccent: "#3A2B06", ink: "#8A5F0C" },
+  { id: "omnivore", label: "Meat & Fish", accent: "var(--roast)", onAccent: "#fff", ink: "var(--roast)" },
+];
+
+function App() {
+  const [tab, setTab] = useState("pantry");
+  const [pantry, setPantry] = useState([]);
+  const [researched, setResearched] = useState([]);
+  const [keys, setKeys] = useState([]);
+  const [activeKeyId, setActiveKeyId] = useState(null);
+  const [rememberKeys, setRememberKeys] = useState(false);
+  const [keyRingOpen, setKeyRingOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => { (async () => {
+    const p = await loadPantry(); if (p && Array.isArray(p)) setPantry(p);
+    const r = await loadResearched(); if (r && Array.isArray(r)) setResearched(r);
+    const k = await loadKeys(); if (k && k.remember) { setKeys(k.keys || []); setActiveKeyId(k.activeKeyId || null); setRememberKeys(true); }
+    setLoaded(true);
+  })(); }, []);
+  /* DATA-SAFETY: only persist a store after a user-initiated change in this
+     session. Without this, a transient load failure (private browsing,
+     storage hiccup, corrupted JSON) would flip `loaded` with empty state and
+     the save effects would overwrite the user's saved pantry with []. */
+  const dirty = useRef({ pantry: false, researched: false, keys: false });
+  useEffect(() => { if (loaded && dirty.current.pantry) savePantry(pantry); }, [pantry, loaded]);
+  useEffect(() => { if (loaded && dirty.current.researched) saveResearched(researched); }, [researched, loaded]);
+  useEffect(() => { if (loaded && dirty.current.keys) saveKeys(rememberKeys ? { keys, activeKeyId, remember: true } : null); }, [keys, activeKeyId, rememberKeys, loaded]);
+
+  const addResearched = (recipes) => { dirty.current.researched = true; setResearched((prev) => {
+    const ids = new Set(prev.map((r) => r.id));
+    return [...prev, ...recipes.filter((r) => !ids.has(r.id))];
+  }); };
+
+  const addKey = (label, value) => {
+    dirty.current.keys = true;
+    const id = "k-" + Math.random().toString(36).slice(2, 9);
+    setKeys((prev) => [...prev, { id, label: label || "My key", value }]);
+    setActiveKeyId(id);
+  };
+  const removeKey = (id) => {
+    dirty.current.keys = true;
+    setKeys((prev) => prev.filter((k) => k.id !== id));
+    setActiveKeyId((cur) => (cur === id ? null : cur));
+  };
+  const activateKey = (id) => { dirty.current.keys = true; setActiveKeyId(id); };
+  const toggleRemember = () => { dirty.current.keys = true; setRememberKeys((v) => !v); };
+  const activeKey = (keys.find((k) => k.id === activeKeyId) || {}).value || "";
+
+  const addItem = (name) => {
+    const n = normName(name); if (!n) return;
+    dirty.current.pantry = true;
+    setPantry((prev) => (prev.some((p) => normName(p) === n) ? prev : [...prev, n]));
+  };
+  const removeItem = (name) => { dirty.current.pantry = true; setPantry((prev) => prev.filter((p) => normName(p) !== normName(name))); };
+  const toggleItem = (name) => { dirty.current.pantry = true; setPantry((prev) => (prev.some((p) => normName(p) === normName(name)) ? prev.filter((p) => normName(p) !== normName(name)) : [...prev, normName(name)])); };
+
+  /* Backup import MERGES — it can only ever add, never remove */
+  const importBackup = (o) => {
+    if (!o || o.app !== "larder") return false;
+    if (Array.isArray(o.pantry)) {
+      dirty.current.pantry = true;
+      setPantry((prev) => {
+        const have = new Set(prev.map(normName)); const merged = [...prev];
+        o.pantry.forEach((x) => { const n = normName(x); if (n && !have.has(n)) { have.add(n); merged.push(n); } });
+        return merged;
+      });
+    }
+    if (Array.isArray(o.researched)) addResearched(o.researched);
+    return true;
+  };
+
+  return (
+    <div className="app">
+      <header className="masthead">
+        <div className="brand">
+          <span className="mark">◲</span>
+          <div>
+            <h1>Larder</h1>
+            <p className="tagline">Cook what's on your shelves</p>
+          </div>
+        </div>
+        <div className="mast-right">
+          <button className={"keyring-btn" + (activeKey ? " active" : "")} onClick={() => setKeyRingOpen(true)}>
+            <span className="keyring-dot" />{activeKey ? "API key set" : "API key"}
+          </button>
+          <div className="pantry-count"><span>{pantry.length}</span> items on hand</div>
+        </div>
+      </header>
+
+      <nav className="tabs" role="tablist">
+        {TABS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={tab === t.id}
+            className={"tab" + (tab === t.id ? " active" : "")}
+            style={tab === t.id ? { "--tab-accent": t.accent, "--on-accent": t.onAccent, "--accent-ink": t.ink } : {}}
+            onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      <main className="stage">
+        {storageHealth.ephemeral && (
+          <div className="storage-warn">
+            <strong>Heads up: this session can't save permanently.</strong> {storageHealth.reason === "file"
+              ? "You've opened Larder as a local file — mobile and desktop browsers sandbox file pages, so your pantry won't survive closing. Use the hosted (GitHub Pages) link instead, "
+              : "This browser is blocking storage (often private/incognito mode). Switch to a normal tab, "}
+            and use <em>Export backup</em> below to keep a copy that's always yours.
+          </div>
+        )}
+        {tab === "pantry"
+          ? <Pantry pantry={pantry} addItem={addItem} removeItem={removeItem} toggleItem={toggleItem}
+              apiKey={activeKey} onAddKey={addKey} onOpenKeyRing={() => setKeyRingOpen(true)}
+              researched={researched} onImportBackup={importBackup} />
+          : <RecipePanel key={tab} diet={tab} pantry={pantry} meta={TABS.find((t) => t.id === tab)}
+              researched={researched} addResearched={addResearched} apiKey={activeKey}
+              onNeedKey={() => setKeyRingOpen(true)} />}
+      </main>
+
+      {keyRingOpen && (
+        <KeyRing keys={keys} activeKeyId={activeKeyId} rememberKeys={rememberKeys}
+          onAdd={addKey} onRemove={removeKey} onActivate={activateKey}
+          onToggleRemember={toggleRemember} onClose={() => setKeyRingOpen(false)} />
+      )}
+
+      <SourcesFooter />
+    </div>
+  );
+}
+
+/* ---------- Front-and-centre key panel (Page 1) ---------- */
+function ChefKeyPanel({ apiKey, onAddKey, onOpenKeyRing }) {
+  const [val, setVal] = useState("");
+  const connected = !!apiKey;
+  const connect = () => { const v = val.trim(); if (v) { onAddKey("My key", v); setVal(""); } };
+  return (
+    <div className={"chef-key" + (connected ? " connected" : "")}>
+      <div className="chef-key-head">
+        <div className="chef-key-copy">
+          <div className="chef-key-title">{connected ? "Chef Boye R. Dee is on the line" : "Hire Chef Boye R. Dee"}</div>
+          <p className="chef-key-note">
+            {connected
+              ? "Your Anthropic API key is set — the Chef can research and cook up brand-new recipes in each tab."
+              : "An Anthropic API key is required to run Chef Boye R. Dee's cookbook — the AI researcher that develops new recipes from your pantry. Your pantry, saved recipes, calories and PDF exports all work without one."}
+          </p>
+        </div>
+        <span className="chef-badge">{connected ? "Connected" : "Key required"}</span>
+      </div>
+      {connected ? (
+        <div className="chef-key-add">
+          <span className="key-mask">{maskKey(apiKey)}</span>
+          <button className="btn-ghost" onClick={onOpenKeyRing}>Manage keys</button>
+        </div>
+      ) : (
+        <div className="chef-key-add">
+          <input className="add-input" type="password" placeholder="Paste your key: sk-ant-…" value={val}
+            onChange={(e) => setVal(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") connect(); }} />
+          <button className="btn-solid" onClick={connect}>Connect the Chef</button>
+        </div>
+      )}
+      <p className="chef-key-fine">
+        Create a key at console.anthropic.com. It stays in your browser and is billed to your Anthropic account — for personal use only; never publish a hosted copy carrying a shared key.
+      </p>
+    </div>
+  );
+}
+
+/* ---------- Backup: export/import — the user-owned guarantee ---------- */
+function BackupRow({ pantry, researched, onImportBackup }) {
+  const fileRef = useRef(null);
+  const [msg, setMsg] = useState("");
+  const doExport = () => {
+    const payload = { app: "larder", v: 1, exportedAt: new Date().toISOString(), pantry, researched };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "larder-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    setMsg("Backup downloaded — keep it anywhere; import it on any device.");
+  };
+  const doImport = async (f) => {
+    if (!f) return;
+    try {
+      const o = JSON.parse(await f.text());
+      const ok = onImportBackup(o);
+      setMsg(ok ? "Backup imported — merged with what's already here (nothing was removed)." : "That file doesn't look like a Larder backup.");
+    } catch (e) { setMsg("Couldn't read that file — is it a Larder backup (.json)?"); }
+    if (fileRef.current) fileRef.current.value = "";
+  };
+  return (
+    <div className="backup-row">
+      <span className="backup-copy">Your pantry and cookbook live in this browser. Keep a copy that's always yours:</span>
+      <div className="backup-btns">
+        <button className="btn-ghost" onClick={doExport}>Export backup</button>
+        <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(e) => doImport(e.target.files[0])} />
+        <button className="btn-ghost" onClick={() => fileRef.current && fileRef.current.click()}>Import backup</button>
+      </div>
+      {msg && <span className="backup-msg">{msg}</span>}
+    </div>
+  );
+}
+
+/* ---------- Pantry tab ---------- */
+function Pantry({ pantry, addItem, removeItem, toggleItem, apiKey, onAddKey, onOpenKeyRing, researched, onImportBackup }) {
+  const [custom, setCustom] = useState("");
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const inPantry = (n) => pantry.some((p) => normName(p) === normName(n));
+  const catalogueSet = new Set(PANTRY_CATALOGUE.flatMap((g) => g.items.map(normName)));
+  const extras = pantry.filter((p) => !catalogueSet.has(normName(p)));
+
+  return (
+    <section className="panel">
+      <ChefKeyPanel apiKey={apiKey} onAddKey={onAddKey} onOpenKeyRing={onOpenKeyRing} />
+      <div className="panel-head">
+        <div>
+          <h2>Your pantry</h2>
+          <p className="sub">Tap the staples you have, add anything else, or upload a shopping list.</p>
+        </div>
+        <button className="btn-ghost" onClick={() => setUploadOpen(true)}>Upload shopping list</button>
+      </div>
+
+      <BackupRow pantry={pantry} researched={researched} onImportBackup={onImportBackup} />
+
+      <div className="add-row">
+        <input className="add-input" placeholder="Add an item…" value={custom}
+          onChange={(e) => setCustom(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && custom.trim()) { addItem(custom); setCustom(""); } }} />
+        <button className="btn-solid" onClick={() => { if (custom.trim()) { addItem(custom); setCustom(""); } }}>Add</button>
+      </div>
+
+      {pantry.length > 0 && (
+        <div className="on-hand">
+          <div className="shelf-label">On your shelves</div>
+          <div className="chips">
+            {pantry.map((p) => (
+              <button key={p} className="chip chip-on" onClick={() => removeItem(p)} title="Remove">
+                {p}<span className="x">×</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {PANTRY_CATALOGUE.map((g) => (
+        <div key={g.group} className="cat">
+          <div className="cat-label">{g.group}</div>
+          <div className="chips">
+            {g.items.map((it) => (
+              <button key={it} className={"chip" + (inPantry(it) ? " chip-on" : "")}
+                onClick={() => toggleItem(it)}>{it}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {extras.length > 0 && (
+        <p className="foot-note">{extras.length} custom item{extras.length > 1 ? "s" : ""} added beyond the staples above.</p>
+      )}
+
+      {uploadOpen && <UploadModal onClose={() => setUploadOpen(false)} addItem={addItem} apiKey={apiKey} />}
+    </section>
+  );
+}
+
+/* ---------- Shopping-list upload (photo / paste / file) ---------- */
+function UploadModal({ onClose, addItem, apiKey }) {
+  const [mode, setMode] = useState("paste");
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [added, setAdded] = useState(0);
+  const fileRef = useRef(null);
+  const photoRef = useRef(null);
+
+  const commitList = (raw) => {
+    const items = raw.split(/[\n,;]+/).map((s) => s.replace(/^[-*•\d.\s]+/, "").trim()).filter(Boolean);
+    items.forEach(addItem); setAdded(items.length);
+  };
+
+  const handleFile = async (file) => {
+    setErr(""); if (!file) return;
+    try { const t = await file.text(); commitList(t); } catch (e) { setErr("Could not read that file."); }
+  };
+
+  const handlePhoto = async (file) => {
+    setErr(""); if (!file) return; setBusy(true);
+    try {
+      const b64 = await new Promise((res, rej) => {
+        const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(file);
+      });
+      const media = file.type || "image/jpeg";
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST", headers: anthropicHeaders(apiKey),
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6", max_tokens: 1000,
+          messages: [{ role: "user", content: [
+            { type: "image", source: { type: "base64", media_type: media, data: b64 } },
+            { type: "text", text: "Read this shopping list. Respond with ONLY a JSON array of the grocery item names as lowercase strings, no quantities, no markdown." },
+          ] }],
+        }),
+      });
+      if (!resp.ok) throw new Error("vision");
+      const data = await resp.json();
+      const t = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+      let clean = t.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const s = clean.indexOf("["), e = clean.lastIndexOf("]");
+      if (s !== -1 && e !== -1) clean = clean.slice(s, e + 1);
+      const arr = JSON.parse(clean);
+      arr.forEach((x) => addItem(String(x))); setAdded(arr.length);
+    } catch (e) { setErr("Couldn't read the photo. Try pasting the list instead."); }
+    setBusy(false);
+  };
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h3>Add a shopping list</h3>
+          <button className="x-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="seg">
+          {[["paste", "Paste / type"], ["file", "File (txt/csv)"], ["photo", "Photo"]].map(([m, l]) => (
+            <button key={m} className={"seg-btn" + (mode === m ? " on" : "")} onClick={() => { setMode(m); setErr(""); setAdded(0); }}>{l}</button>
+          ))}
+        </div>
+
+        {mode === "paste" && (
+          <div>
+            <textarea className="paste-area" placeholder={"e.g.\nchickpeas\nspinach, garlic\nolive oil"} value={text} onChange={(e) => setText(e.target.value)} />
+            <button className="btn-solid full" onClick={() => commitList(text)}>Add items</button>
+          </div>
+        )}
+        {mode === "file" && (
+          <div className="drop">
+            <p>Upload a plain-text or CSV list — one item per line or comma-separated.</p>
+            <input ref={fileRef} type="file" accept=".txt,.csv,text/plain,text/csv" hidden onChange={(e) => handleFile(e.target.files[0])} />
+            <button className="btn-solid" onClick={() => fileRef.current && fileRef.current.click()}>Choose file</button>
+          </div>
+        )}
+        {mode === "photo" && (
+          <div className="drop">
+            <p>Snap or upload a photo of a written or printed list — it's read automatically.</p>
+            <input ref={photoRef} type="file" accept="image/*" hidden onChange={(e) => handlePhoto(e.target.files[0])} />
+            <button className="btn-solid" disabled={busy} onClick={() => photoRef.current && photoRef.current.click()}>{busy ? "Reading…" : "Choose photo"}</button>
+          </div>
+        )}
+
+        {err && <p className="err">{err}</p>}
+        {added > 0 && <p className="ok">Added {added} item{added > 1 ? "s" : ""} to your pantry.</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Recipe panel (shared by the three diet tabs) ---------- */
+const DIET_COPY = {
+  vegan: { title: "Vegan recipes", note: "100% plant-based. No animal products — only plant substitutes." },
+  vegetarian: { title: "Vegetarian recipes", note: "Plant-based plus cheese, yogurt and butter only. No eggs, milk, cream or meat." },
+  omnivore: { title: "Meat & fish recipes", note: "Everything else — built around fish, red meat and lean proteins." },
+};
+
+function RecipePanel({ diet, pantry, meta, researched, addResearched, apiKey, onNeedKey }) {
+  const accent = meta.accent;
+  const [count, setCount] = useState(3);
+  const [strict, setStrict] = useState(false);
+  const [results, setResults] = useState([]);
+  const [seen, setSeen] = useState(new Set());
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState("");
+  const [err, setErr] = useState("");
+  const [touched, setTouched] = useState(false);
+  const [researching, setResearching] = useState(false);
+  const [researchMsg, setResearchMsg] = useState("");
+  const [keyHint, setKeyHint] = useState(false);
+
+  const savedForDiet = researched.filter((r) => r.diet === diet).length;
+
+  const libraryPool = useMemo(
+    () => [...LIBRARY, ...researched].filter((r) => r.diet === diet && recipeAllowedFor(diet, r.display)),
+    [diet, researched]
+  );
+
+  const pickLibrary = (excludeIds, n) => {
+    const eligible = libraryPool.filter((r) => {
+      if (excludeIds.has(r.id)) return false;
+      const miss = missingFor(r, pantry).length;
+      return strict ? miss === 0 : miss <= 3;
+    });
+    // shuffle
+    for (let i = eligible.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [eligible[i], eligible[j]] = [eligible[j], eligible[i]]; }
+    return eligible.slice(0, n).map((r) => normalizeLibrary(r, pantry));
+  };
+
+  const fetchSet = async (fresh) => {
+    setErr(""); setTouched(true); setLoading(true);
+    const exclude = fresh ? new Set() : new Set(seen);
+    const n = count;
+    const fromLib = pickLibrary(exclude, n);
+    fromLib.forEach((r) => exclude.add(r.id));
+    let out = [...fromLib];
+    const gap = n - out.length;
+
+    if (gap > 0 && pantry.length > 0) {
+      setStatus(`Library found ${out.length}. Asking Claude for ${gap} more…`);
+      const avoid = [...out.map((r) => r.title)];
+      try {
+        const calls = Array.from({ length: gap }).map(() =>
+          generateOneRecipe({ diet, pantry, strict, avoid, apiKey }).catch(() => null));
+        const ai = (await Promise.all(calls)).filter(Boolean);
+        ai.forEach((r) => { out.push(r); exclude.add(r.id); });
+      } catch (e) { setErr("The recipe service is unavailable right now — showing library matches only."); }
+    }
+    setStatus("");
+    if (out.length === 0) setErr(pantry.length === 0 ? "Add a few pantry items first." : "No matches — try Flexible mode or add more items.");
+    setResults(out);
+    setSeen((prev) => { const s = new Set(prev); out.forEach((r) => s.add(r.id)); return s; });
+    setLoading(false);
+  };
+
+  const copy = DIET_COPY[diet];
+
+  const runResearch = async () => {
+    if (pantry.length === 0) { setErr("Add pantry items first — Research builds recipes around what you have."); return; }
+    setErr(""); setResearchMsg(""); setKeyHint(false); setResearching(true);
+    setStatus(`Chef Boye R. Dee is drafting ${count} ${copy.title.toLowerCase()}…`);
+    const existing = [...LIBRARY, ...researched].filter((r) => r.diet === diet).map((r) => r.title).concat(results.map((r) => r.title));
+    const lowerExisting = new Set(existing.map((t) => t.toLowerCase()));
+    try {
+      /* 1. One batched call drafts the whole set (Chef diversifies internally) */
+      let batch = [];
+      try { batch = await generateRecipeBatch({ diet, pantry, strict, avoid: existing, apiKey, n: count }); } catch (e) { batch = []; }
+      batch = batch.filter((r) => !lowerExisting.has((r.title || "").toLowerCase()));
+
+      /* 2. Redundancy audit — per-request hero weights start fresh here */
+      const audit = auditBatch(batch);
+      let keep = audit.keep.slice(0, count);
+      const heroCounts = audit.heroCounts;
+
+      /* 3. Regenerate the shortfall sequentially so weights accumulate */
+      let regenerated = 0;
+      let attempts = 0;
+      while (keep.length < count && attempts < count + 2) {
+        attempts++;
+        setStatus(`Chef found ${count - keep.length} too similar — re-working with different heroes…`);
+        const avoidNow = existing.concat(keep.map((r) => r.title));
+        const r = await generateOneRecipe({ diet, pantry, strict, avoid: avoidNow, apiKey, heroWeights: heroCounts }).catch(() => null);
+        if (!r || lowerExisting.has((r.title || "").toLowerCase())) continue;
+        r._heroes = heroesOf(r);
+        if (keep.some((k) => isRedundant(k, r))) continue;   // still redundant -> try again
+        keep.push(r); regenerated++;
+        r._heroes.forEach((h) => { heroCounts[h] = (heroCounts[h] || 0) + 1; });
+      }
+
+      setStatus("");
+      if (keep.length === 0) {
+        setErr("Couldn't develop new recipes just now — please try again.");
+        setKeyHint(!apiKey);
+        setResearching(false); return;
+      }
+      const ai = keep;
+      const saved = ai.map((r) => toSavedRecipe(r, diet));
+      addResearched(saved);                                   // persist to memory alongside the rest
+      const normalized = saved.map((r) => normalizeLibrary(r, pantry));
+      setResults(normalized); setTouched(true);
+      setSeen((prev) => { const s = new Set(prev); normalized.forEach((r) => s.add(r.id)); return s; });
+      setResearchMsg(`Chef Boye R. Dee cooked up and saved ${ai.length} distinct recipe${ai.length > 1 ? "s" : ""} to your cookbook`
+        + (regenerated > 0 ? ` (${regenerated} re-worked to avoid repeats)` : "")
+        + (ai.length < count ? ` — ${count - ai.length} dropped as too similar` : "") + ".");
+    } catch (e) { setStatus(""); setErr("The recipe service is unavailable right now."); setKeyHint(!apiKey); }
+    setResearching(false);
+  };
+
+  return (
+    <section className="panel" style={{ "--tab-accent": accent, "--on-accent": meta.onAccent, "--accent-ink": meta.ink }}>
+      <div className="panel-head">
+        <div>
+          <h2>{copy.title}</h2>
+          <p className="sub">{copy.note}</p>
+        </div>
+      </div>
+
+      <div className="controls">
+        <div className="ctrl">
+          <span className="ctrl-label">How many</span>
+          <div className="seg small">
+            {[1, 3, 5].map((n) => (
+              <button key={n} className={"seg-btn" + (count === n ? " on" : "")} onClick={() => setCount(n)}>{n}</button>
+            ))}
+          </div>
+        </div>
+        <div className="ctrl">
+          <span className="ctrl-label">Ingredients</span>
+          <button className={"toggle" + (strict ? " strict" : "")} onClick={() => setStrict((s) => !s)}>
+            <span className={!strict ? "on" : ""}>Flexible</span>
+            <span className={strict ? "on" : ""}>Strict</span>
+          </button>
+          <span className="hint">{strict ? "only what you have" : "up to 3 missing"}</span>
+        </div>
+        <div className="ctrl grow">
+          <button className="btn-solid" disabled={loading} onClick={() => fetchSet(true)}>
+            {loading ? "Finding…" : results.length ? "Find new set" : "Find recipes"}
+          </button>
+          {results.length > 0 && (
+            <button className="btn-ghost" disabled={loading} onClick={() => fetchSet(false)}>Reshuffle</button>
+          )}
+        </div>
+      </div>
+
+      <div className="research-row">
+        <button className="btn-research" disabled={researching || loading} onClick={runResearch}>
+          {researching ? "Chef is cooking…" : "Ask Chef Boye R. Dee"}
+        </button>
+        <span className="research-note">
+          The Chef researches {count} new recipe{count > 1 ? "s" : ""} from your pantry and saves {count > 1 ? "them" : "it"} to your cookbook
+          {savedForDiet > 0 ? ` · ${savedForDiet} saved so far` : ""}
+        </span>
+      </div>
+
+      {status && <p className="status">{status}</p>}
+      {researchMsg && <p className="ok">{researchMsg}</p>}
+      {err && <p className="err">{err}{keyHint && <> Running outside Claude? <button className="link-btn" onClick={onNeedKey}>Add your Anthropic API key</button> to enable the AI researcher.</>}</p>}
+
+      {!touched && pantry.length === 0 && (
+        <div className="empty">Your pantry is empty. Add items in the Pantry tab, then find recipes here.</div>
+      )}
+
+      <div className="cards">
+        {results.map((r) => <RecipeCard key={r.id} r={r} accent={accent} />)}
+      </div>
+    </section>
+  );
+}
+
+function RecipeCard({ r }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <article className="card">
+      <div className="spine" />
+      <div className="card-body">
+        <div className="card-top">
+          <div>
+            <h3>{r.title}</h3>
+            <div className="meta">
+              <span className="tag">{r.source === "AI" ? "Chef" : r.source === "Saved" ? "Saved" : "Library"}</span>
+              <span className="kcal">≈ {r.kcal} kcal/serving</span>
+              {r.flavor && <span className="flavor">{r.flavor}</span>}
+              <span>in the style of {r.style}</span>
+              <span>· {r.servings} servings · {r.time} min</span>
+            </div>
+          </div>
+          <button className="pdf-btn" onClick={() => downloadPdf(r)} title="Download PDF">PDF ↓</button>
+        </div>
+
+        {r.blurb && (
+          <p className="chef-blurb"><span className="chef-name">Chef Boye R. Dee</span>{r.blurb}</p>
+        )}
+
+        {r.missing && r.missing.length > 0 && (
+          <div className="tobuy">To buy: {r.missing.map((m) => <span key={m} className="buy-chip">{m}</span>)}</div>
+        )}
+
+        <button className="reveal" onClick={() => setOpen((o) => !o)}>{open ? "Hide recipe" : "Show recipe"}</button>
+
+        {open && (
+          <div className="recipe">
+            <div className="rcol">
+              <h4>Ingredients</h4>
+              <ul>{r.ingredients.map((i, idx) => (
+                <li key={idx} className={i.have === false ? "miss" : ""}>{i.name}{i.have === false ? " (to buy)" : ""}</li>
+              ))}</ul>
+            </div>
+            <div className="rcol">
+              <h4>Method</h4>
+              <ol>{r.steps.map((s, idx) => <li key={idx}>{s}</li>)}</ol>
+              <p className="cal-note">≈ {r.kcal} kcal per serving · {r.kcalTotal} kcal total. Approximate, estimated from ingredient amounts{r.kcalCoverage < 0.8 ? " (partial — some items not in the food table)" : ""}.</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+/* ---------- API key ring ---------- */
+function KeyRing({ keys, activeKeyId, rememberKeys, onAdd, onRemove, onActivate, onToggleRemember, onClose }) {
+  const [label, setLabel] = useState("");
+  const [val, setVal] = useState("");
+  const [note, setNote] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState("");
+
+  const add = () => {
+    const v = val.trim();
+    if (!v) { setNote("Paste a key first."); return; }
+    setNote(v.startsWith("sk-ant-") ? "" : "That doesn't look like an Anthropic key (they start with sk-ant-) — added anyway.");
+    onAdd(label.trim(), v); setLabel(""); setVal("");
+  };
+  const runTest = async () => {
+    const active = keys.find((k) => k.id === activeKeyId);
+    if (!active) { setTestResult("pick"); return; }
+    setTesting(true); setTestResult("");
+    const ok = await testApiKey(active.value);
+    setTesting(false); setTestResult(ok ? "ok" : "fail");
+  };
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h3>API key ring</h3>
+          <button className="x-btn" onClick={onClose}>×</button>
+        </div>
+
+        <p className="keyring-intro">
+          The AI researcher and photo list-reader run on Claude. <strong>Inside Claude.ai you don't need a key</strong> — it's already connected. Add a key only if you run Larder on your own (self-hosted or opened as a file).
+        </p>
+        <p className="keyring-warn">
+          A key typed into a web page is visible in that browser — use your own key for personal use, and never publish a hosted copy with a shared key. Keys are created at console.anthropic.com.
+        </p>
+
+        <div className="key-add">
+          <input className="add-input" placeholder="Label (optional)" value={label} onChange={(e) => setLabel(e.target.value)} />
+          <input className="add-input" type="password" placeholder="sk-ant-…" value={val}
+            onChange={(e) => setVal(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") add(); }} />
+          <button className="btn-solid" onClick={add}>Add key</button>
+        </div>
+        {note && <p className="hint" style={{ marginTop: 6 }}>{note}</p>}
+
+        {keys.length > 0 ? (
+          <div className="key-list">
+            {keys.map((k) => (
+              <div key={k.id} className={"key-item" + (k.id === activeKeyId ? " on" : "")}>
+                <label className="key-pick">
+                  <input type="radio" name="activekey" checked={k.id === activeKeyId} onChange={() => onActivate(k.id)} />
+                  <span className="key-label">{k.label}</span>
+                  <span className="key-mask">{maskKey(k.value)}</span>
+                </label>
+                <button className="key-remove" onClick={() => onRemove(k.id)}>Remove</button>
+              </div>
+            ))}
+          </div>
+        ) : <p className="hint" style={{ margin: "12px 0" }}>No keys added — not needed inside Claude.ai.</p>}
+
+        {keys.length > 0 && (
+          <div className="key-actions">
+            <button className="btn-ghost" disabled={testing} onClick={runTest}>{testing ? "Testing…" : "Test active key"}</button>
+            {testResult === "ok" && <span className="ok" style={{ margin: 0 }}>Key works.</span>}
+            {testResult === "fail" && <span className="err" style={{ margin: 0 }}>Key failed — check it's valid and has credit.</span>}
+            {testResult === "pick" && <span className="hint">Select a key to test.</span>}
+          </div>
+        )}
+
+        <label className="remember-row">
+          <input type="checkbox" checked={rememberKeys} onChange={onToggleRemember} />
+          <span>Remember on this device <span className="hint">— stores keys in this app's local storage; off by default for safety.</span></span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Sources ---------- */
+function SourcesFooter() {
+  const plant = SOURCES.filter((s) => s.kind === "plant");
+  const uni = SOURCES.filter((s) => s.kind === "universal");
+  return (
+    <footer className="sources">
+      <h2>Sources</h2>
+      <p className="src-note">Recipes are original formulations developed <em>in the style of</em> these trusted kitchens — the culinary references Larder draws on. Tap any name to visit the source.</p>
+      <div className="src-grid">
+        <div>
+          <div className="src-head">Vegan &amp; vegetarian ({plant.length})</div>
+          <div className="src-list">{plant.map((s) => <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer">{s.name}</a>)}</div>
+        </div>
+        <div>
+          <div className="src-head">Universal ({uni.length})</div>
+          <div className="src-list">{uni.map((s) => <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer">{s.name}</a>)}</div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+</script>
+</body>
+</html>
